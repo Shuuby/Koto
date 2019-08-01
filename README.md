@@ -2,7 +2,7 @@
 A shitty compiler and "toolset" for Koto, a shitty language for controlling deep diving robots (among other things) in a game that does not exist yet.
 
 # Development
-I'm working with with the 64-bit Mono version of the [Godot Engine](https://github.com/godotengine/godot): v3.1.1.stable.mono.official.
+I'm working with the 64-bit Mono version of the [Godot Engine](https://github.com/godotengine/godot): v3.1.1.stable.mono.official.
 
 Current features:
  * Grouping with parentheses
