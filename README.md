@@ -8,6 +8,8 @@ Current features:
  * Grouping with parentheses
  * Basic arithmetic with +, -, * and /
  * Logical operations: !, >, <, ==, >= and >=
+ * Strings and concatenation with + (only string + string for now)
+ * Global variables with var
 
 # How to try?
 Clone the repo and open in Godot I guess? I have not tried.
