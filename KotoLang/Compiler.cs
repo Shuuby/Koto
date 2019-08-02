@@ -99,6 +99,8 @@ public class Compiler
     private void Declaration()
     {
         Statement();
+
+        if (parser.panicMode) Synchronize();
     }
 
     private void Statement()
@@ -320,6 +322,34 @@ public class Compiler
         logger.LogPrint(": {0}", message);
 
         parser.hadError = true;
+    }
+
+    private void Synchronize()
+    {
+        parser.panicMode = false;
+
+        while (parser.current.type != TokenType.EOF)
+        {
+            if (parser.previous.type == TokenType.SEMICOLON) return;
+
+            switch (parser.current.type)
+            {
+                case TokenType.CLASS:
+                case TokenType.FUN:                                   
+                case TokenType.VAR:                                   
+                case TokenType.FOR:                                   
+                case TokenType.IF:                                    
+                case TokenType.WHILE:                                 
+                case TokenType.PRINT:                                 
+                case TokenType.RETURN:                                
+                    return;
+                
+                default:
+                    break; // Do nothing
+            }
+
+            Advance();
+        }
     }
 
     private void EndCompiler()
