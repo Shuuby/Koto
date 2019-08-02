@@ -7,6 +7,7 @@ public enum OpCode
     NIL,
     TRUE,
     FALSE,
+    POP,
     EQUAL,
     GREATER,
     LESS,
@@ -16,6 +17,7 @@ public enum OpCode
     DIVIDE,
     NOT,
     NEGATE,
+    PRINT,
     RETURN,
 };
 

@@ -74,6 +74,8 @@ public class VM
                 case OpCode.TRUE: stack.Push(new Value(true)); break;
                 case OpCode.FALSE: stack.Push(new Value(false)); break;
 
+                case OpCode.POP: stack.Pop(); break;
+
                 case OpCode.EQUAL:
                     EqualityOp();
                     break;
@@ -120,9 +122,13 @@ public class VM
                     }
                     stack.Push(new Value(-stack.Pop().AsNumber()));
                     break;
+
+                case OpCode.PRINT:
+                    logger.LogPrint(stack.Pop().ToString());
+                    break;
                 
                 case OpCode.RETURN:
-                    logger.LogPrint("\n=> {0}", stack.Pop().ToString());
+                    // Exit
                     return InterpretResult.OK;
 
                 

@@ -72,8 +72,11 @@ public class Compiler
         compilingChunk = chunk;
 
         Advance();
-        Expression();
-        Consume(TokenType.EOF, "Expected end of expression.");
+
+        while (!Match(TokenType.EOF))
+        {
+            Declaration();
+        } 
 
         EndCompiler();
         return !parser.hadError;
@@ -86,10 +89,38 @@ public class Compiler
         for (;;)
         {
             parser.current = scanner.ScanToken();
+
             if (parser.current.type != TokenType.ERROR) break;
 
             ErrorAtCurrent(parser.current.content);
         }
+    }
+
+    private void Declaration()
+    {
+        Statement();
+    }
+
+    private void Statement()
+    {
+        if (Match(TokenType.PRINT))
+            PrintStatement();
+        else
+            ExpressionStatement();
+    }
+
+    private void PrintStatement()
+    {
+        Expression();
+        Consume(TokenType.SEMICOLON, "Expect ';' after value.");
+        EmitByte(OpCode.PRINT);
+    }
+
+    private void ExpressionStatement()
+    {
+        Expression();
+        Consume(TokenType.SEMICOLON, "Expect ';' after expression.");
+        EmitByte(OpCode.POP);
     }
 
     private void Expression()
@@ -171,6 +202,7 @@ public class Compiler
         return rules[(int)token];
     }
 
+    // Functions for adding new operations to the bytecode
     private void EmitByte(OpCode newOp) { EmitByte((byte)newOp); }
     private void EmitByte(byte newByte)
     {
@@ -221,6 +253,23 @@ public class Compiler
 
         ErrorAtCurrent(message);
     }
+
+    // Check if current token matches what we want
+    // If it does, consume and return true
+    // If not, leave it alone and return false
+    private bool Match(TokenType type)
+    {
+        if (!Check(type)) return false;
+        Advance();
+        return true;
+    }
+
+    // Helper for Match()
+    private bool Check(TokenType type)
+    {
+        return parser.current.type == type;
+    }
+
 
     private void ParsePrecedence(Precedence precedence)
     {
