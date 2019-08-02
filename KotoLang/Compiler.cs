@@ -41,8 +41,8 @@ public class Compiler
             new ParseRule(null,     Binary,  Precedence.COMPARISON), // TOKEN_GREATER_EQUAL   
             new ParseRule(null,     Binary,  Precedence.COMPARISON), // TOKEN_LESS            
             new ParseRule(null,     Binary,  Precedence.COMPARISON), // TOKEN_LESS_EQUAL      
-            new ParseRule(null,     null,    Precedence.NONE),       // TOKEN_IDENTIFIER      
-            new ParseRule(null,     null,    Precedence.NONE),       // TOKEN_STRING          
+            new ParseRule(Variable, null,    Precedence.NONE),       // TOKEN_IDENTIFIER      
+            new ParseRule(String,   null,    Precedence.NONE),       // TOKEN_STRING          
             new ParseRule(Number,   null,    Precedence.NONE),       // TOKEN_NUMBER          
             new ParseRule(null,     null,    Precedence.NONE),       // TOKEN_AND             
             new ParseRule(null,     null,    Precedence.NONE),       // TOKEN_CLASS           
@@ -89,8 +89,10 @@ public class Compiler
         for (;;)
         {
             parser.current = scanner.ScanToken();
+            //logger.LogPrint("T => {0}", parser.current.type.ToString());
 
-            if (parser.current.type != TokenType.ERROR) break;
+            if (parser.current.type != TokenType.ERROR)
+                break;
 
             ErrorAtCurrent(parser.current.content);
         }
@@ -98,30 +100,94 @@ public class Compiler
 
     private void Declaration()
     {
-        Statement();
+        if (Match(TokenType.VAR))
+        {
+            VarDeclaration();
+        }
+        else
+        {
+            Statement();
+        }
 
         if (parser.panicMode) Synchronize();
+    }
+
+    private void VarDeclaration()
+    {
+        byte global = ParseVariable("Expected variable name.");
+
+        if (Match(TokenType.EQUAL))
+        {
+            Expression();
+        }
+        else
+        {
+            EmitByte(OpCode.NIL);
+        }
+
+        Consume(TokenType.SEMICOLON, "Expected ';' after variable declaration.");
+
+        DefineVariable(global);
+    }
+
+    private byte ParseVariable(string errorMessage)
+    {
+        Consume(TokenType.IDENTIFIER, errorMessage);
+        return IdentifierConstant(ref parser.previous);
+    }
+
+    private byte IdentifierConstant(ref Token token)
+    {
+        return MakeConstant(new Value(new Obj(token)));
+    }
+
+    private void DefineVariable(byte global)
+    {
+        EmitBytes(OpCode.DEFINE_GLOBAL, global);
+    }
+
+    private void Variable(bool canAssign)
+    {
+        NamedVariable(parser.previous, canAssign);
+    }
+
+    private void NamedVariable(Token token, bool canAssign)
+    {
+        byte arg = IdentifierConstant(ref token);
+        if (canAssign && Match(TokenType.EQUAL))
+        {
+            Expression();
+            EmitBytes(OpCode.SET_GLOBAL, arg);
+        }
+        else
+        {
+            EmitBytes(OpCode.GET_GLOBAL, arg);
+        }
     }
 
     private void Statement()
     {
         if (Match(TokenType.PRINT))
+        {
             PrintStatement();
+        }
         else
+        {
             ExpressionStatement();
+        }
     }
 
     private void PrintStatement()
     {
         Expression();
-        Consume(TokenType.SEMICOLON, "Expect ';' after value.");
+        Consume(TokenType.SEMICOLON, "Expected ';' after value.");
         EmitByte(OpCode.PRINT);
     }
 
     private void ExpressionStatement()
     {
         Expression();
-        Consume(TokenType.SEMICOLON, "Expect ';' after expression.");
+        Consume(TokenType.SEMICOLON, "Expected ';' after expression.");
         EmitByte(OpCode.POP);
     }
 
@@ -130,19 +196,24 @@ public class Compiler
         ParsePrecedence(Precedence.ASSIGNMENT);
     }
 
-    private void Number()
+    private void Number(bool canAssign)
     {
         double value = Convert.ToDouble(parser.previous.content);
         EmitConstant(new Value(value));
     }
+    
+    private void String(bool canAssign)
+    {
+        EmitConstant(new Value(new Obj(parser.previous.content)));
+    }
 
-    private void Grouping()
+    private void Grouping(bool canAssign)
     {
         Expression();
         Consume(TokenType.RIGHT_PAREN, "Expect ')' after expression.");
     }
 
-    private void Unary()
+    private void Unary(bool canAssign)
     {
         TokenType operatorType = parser.previous.type;
 
@@ -159,7 +230,7 @@ public class Compiler
         }
     }
 
-    private void Binary()
+    private void Binary(bool canAssign)
     {
         // Remember the operator.
         TokenType operatorType = parser.previous.type;
@@ -186,7 +257,7 @@ public class Compiler
         }
     }
 
-    private void Literal()
+    private void Literal(bool canAssign)
     {
         switch (parser.previous.type)
         {
@@ -276,20 +347,27 @@ public class Compiler
     private void ParsePrecedence(Precedence precedence)
     {
         Advance();
-        Action prefixRule = GetRule(parser.previous.type).prefixFunction;
+        Action<bool> prefixRule = GetRule(parser.previous.type).prefixFunction;
         if (prefixRule == null)
         {
             Error("Expected expression.");
             return;
         }
 
-        prefixRule();
+        bool canAssign = precedence <= Precedence.ASSIGNMENT;
+        prefixRule(canAssign);
 
         while (precedence <= GetRule(parser.current.type).precedence)
         {
             Advance();
-            Action infixRule = GetRule(parser.previous.type).infixFunction;
-            infixRule();
+            Action<bool> infixRule = GetRule(parser.previous.type).infixFunction;
+            infixRule(canAssign);
+        }
+
+        if (canAssign && Match(TokenType.EQUAL))
+        {
+            Error("Invalid assignment target.");
+            Expression();
         }
     }
 
@@ -373,11 +451,11 @@ public class Parser
 
 public class ParseRule
 {
-    public Action prefixFunction;
-    public Action infixFunction;
+    public Action<bool> prefixFunction;
+    public Action<bool> infixFunction;
     public Precedence precedence;
 
-    public ParseRule(Action prefix, Action infix, Precedence precedence)
+    public ParseRule(Action<bool> prefix, Action<bool> infix, Precedence precedence)
     {
         this.prefixFunction = prefix;
         this.infixFunction = infix;

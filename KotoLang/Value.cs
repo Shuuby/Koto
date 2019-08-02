@@ -1,16 +1,17 @@
 using Godot;
 using System;
 
-// For now I'll just make this a horrible piece of shit and refactor later
-
-// Maybe go with this in the future..?
-// https://stackoverflow.com/questions/3151702/discriminated-union-in-c-sharp
+// This will probably require refactoring at some point.
+// We just crudely save the actual value in here without
+// any thought of memory management or pointers to objects
+// in heap. It's horrible. I love it.
 
 public class Value
 {
     public ValueType type;
     private bool boolean;
     private double number;
+    private Obj obj;
 
     public Value(bool boolean)
     {
@@ -22,6 +23,12 @@ public class Value
     {
         this.type = ValueType.NUMBER;
         this.number = number;
+    }
+    
+    public Value(Obj obj)
+    {
+        this.type = ValueType.OBJ;
+        this.obj = obj;
     }
 
     public Value()
@@ -45,20 +52,42 @@ public class Value
             throw new Exception("Value conversion error.");
     }
 
-    public bool IsBool()
+    public Obj AsObj()
     {
-        return type == ValueType.BOOL ? true : false;
+        if (IsObj())
+            return obj;
+        else
+            throw new Exception("Value conversion error.");
     }
 
-    public bool IsNumber()
+    public string AsString()
     {
-        return type == ValueType.NUMBER ? true : false;
+        if (IsString())
+            return AsObj().AsString();
+        else
+            throw new Exception("Value conversion error.");
     }
 
-    public bool IsNil()
+    // Obj helpers
+    public ObjType GetObjType()
     {
-        return type == ValueType.NIL ? true : false;
+        return AsObj().type;
     }
+
+    public bool IsString()
+    {
+        return IsObjType(ObjType.STRING);
+    }
+
+    public bool IsObjType(ObjType type)
+    {
+        return IsObj() && AsObj().type == type;
+    }
+
+    public bool IsBool() { return type == ValueType.BOOL ? true : false; }
+    public bool IsNumber() { return type == ValueType.NUMBER ? true : false; }
+    public bool IsNil() { return type == ValueType.NIL ? true : false; }
+    public bool IsObj() {return type == ValueType.OBJ ? true : false; }
 
     public override string ToString()
     {
@@ -66,6 +95,8 @@ public class Value
             return boolean.ToString();
         else if (IsNumber())
             return number.ToString();
+        else if (IsObj())
+            return obj.ToString();
         else
             return "NIL";
     }
@@ -76,5 +107,6 @@ public enum ValueType
 {
     BOOL,
     NIL,
-    NUMBER
+    NUMBER,
+    OBJ
 };

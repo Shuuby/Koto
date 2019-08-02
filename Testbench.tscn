@@ -63,7 +63,11 @@ margin_bottom = 580.0
 size_flags_horizontal = 3
 size_flags_vertical = 3
 custom_fonts/font = ExtResource( 3 )
-text = "!(5 - 4 > 3 * 2 == !nil)"
+text = "var who = \"Shuuby\";
+var what = \"amazing\";
+var truth = who + \" is \" + what;
+
+print truth;"
 highlight_current_line = true
 syntax_highlighting = true
 show_line_numbers = true

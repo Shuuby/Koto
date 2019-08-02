@@ -185,8 +185,14 @@ public class Scanner
     private TokenType IdentifierType()
     {
         string identifier = source.Substring(start, currentIndex - start);
-        TokenType type = TokenType.IDENTIFIER;
-        identifiers.TryGetValue(identifier, out type);
+        //GD.Print("identifier string = '", identifier, "'");
+
+        TokenType type;
+        if (!identifiers.TryGetValue(identifier, out type))
+            type = TokenType.IDENTIFIER;
+
+        //GD.Print("identifier type = '", type.ToString() + "'");
+
         return type;
     }
 

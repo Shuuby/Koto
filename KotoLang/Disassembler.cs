@@ -49,6 +49,15 @@ public class Disassembler
             case OpCode.POP:
                 return SimpleInstruction("OP_POP", offset);
 
+            case OpCode.GET_GLOBAL:
+                return ConstantInstruction("OP_GET_GLOBAL", chunk, offset);
+
+            case OpCode.DEFINE_GLOBAL:
+                return ConstantInstruction("OP_DEFINE_GLOBAL", chunk, offset);
+
+            case OpCode.SET_GLOBAL:
+                return ConstantInstruction("OP_SET_GLOBAL", chunk, offset);
+
             case OpCode.EQUAL:
                 return SimpleInstruction("OP_EQUAL", offset);
 

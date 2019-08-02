@@ -54,6 +54,7 @@
     <Compile Include="KotoLang\Chunk.cs" />
     <Compile Include="KotoLang\Disassembler.cs" />
     <Compile Include="KotoLang\Koto.cs" />
+    <Compile Include="KotoLang\Obj.cs" />
     <Compile Include="KotoLang\Scanner.cs" />
     <Compile Include="KotoLang\Value.cs" />
     <Compile Include="KotoLang\VM.cs" />

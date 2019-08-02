@@ -30,12 +30,17 @@ public class VM
 
     private Logger logger;
 
+    // Dictionaries/HashTables for variable
+    private Dictionary<string, Value> globals;
+
     public VM(Logger logger)
     {
         this.logger = logger;
         stack = new Stack<Value>();
         compiler = new Compiler(logger);
         disassembler = new Disassembler(logger);
+
+        globals = new Dictionary<string, Value>();
     }
 
     public InterpretResult Interpret(string source)
@@ -76,6 +81,37 @@ public class VM
 
                 case OpCode.POP: stack.Pop(); break;
 
+                case OpCode.GET_GLOBAL:
+                    string stringToGet = ReadString();
+                    Value valueToGet;
+                    if (globals.TryGetValue(stringToGet, out valueToGet))
+                    {
+                        stack.Push(valueToGet);
+                    }
+                    else
+                    {
+                        RuntimeError("Undefined variable '{0}'", stringToGet);
+                    }
+                    break;
+
+                case OpCode.DEFINE_GLOBAL:
+                    string stringToDefine = ReadString();
+                    globals[stringToDefine] = Peek();
+                    stack.Pop();
+                    break;
+
+                case OpCode.SET_GLOBAL:
+                    string stringToSet = ReadString();
+                    if (globals.ContainsKey(stringToSet))
+                    {
+                        globals[stringToSet] = Peek();
+                    }
+                    else
+                    {
+                        RuntimeError("Undefined variable '{0}'", stringToSet);
+                    }
+                    break;
+
                 case OpCode.EQUAL:
                     EqualityOp();
                     break;
@@ -91,8 +127,20 @@ public class VM
                     break;
 
                 case OpCode.ADD:
-                    if (!BinaryOp((a, b) => a + b))
+                    if (Peek().IsString() && Peek(1).IsString())
+                    {
+                        Concatenate();
+                    }
+                    else if (Peek().IsNumber() && Peek(1).IsNumber())
+                    {
+                        double b = stack.Pop().AsNumber();
+                        double a = stack.Pop().AsNumber();
+                        stack.Push(new Value(a + b));
+                    }
+                    else
+                    {
                         return InterpretResult.RUNTIME_ERROR;
+                    }
                     break;
 
                 case OpCode.SUBTRACT:
@@ -145,8 +193,13 @@ public class VM
 
     private Value ReadConstant()
     {
-        int constantIndex =(int)ReadByte();
+        int constantIndex = (int)ReadByte();
         return currentChunk.constants[constantIndex];
+    }
+
+    private string ReadString()
+    {
+        return ReadConstant().AsString();
     }
     
     private void EqualityOp()
@@ -185,6 +238,15 @@ public class VM
         return true;
     }
 
+    private void Concatenate()
+    {
+        string bString = stack.Pop().AsString();
+        string aString = stack.Pop().AsString();
+        string concat = aString + bString;
+        Value result = new Value(new Obj(concat, false));
+        stack.Push(result);
+    }
+
     private void RuntimeError(string msg, params object[] args)
     {
         string message = String.Format(msg, args);
@@ -213,6 +275,12 @@ public class VM
             case ValueType.BOOL:    return a.AsBool() == b.AsBool();
             case ValueType.NIL:     return true;
             case ValueType.NUMBER:  return a.AsNumber() == b.AsNumber();
+            case ValueType.OBJ:
+                // Only support string objects for now
+                string aString = a.ToString();
+                string bString = b.ToString();
+                return a == b;
+
             default:
                 return false; // Unreachable.
         }
